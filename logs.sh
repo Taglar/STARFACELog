@@ -1,35 +1,44 @@
 #!/bin/bash
 
-# Setze Zielpfad
-DATE=$(date +"%Y-%m-%d_%H-%M")
-ZIPFILE="/tmp/logs_${DATE}.zip"
-TMPDIR="/tmp/logs_${DATE}"
+# Zielverzeichnis für ZIP-Datei
+DATUM=$(date '+%Y-%m-%d_%H-%M')
+ZIPNAME="logs_${DATUM}.zip"
+TMPDIR="/tmp/logs_${DATUM}"
+ZIPPFAD="/tmp/${ZIPNAME}"
 
+# Verzeichnisse vorbereiten
 mkdir -p "$TMPDIR"
 
-# 1. Logs sammeln
-echo "[+] Sammle Log-Dateien..."
+echo "Sammle Logdaten..."
 
-# Verzeichnisse
-cp -r --parents /var/log/asterisk "$TMPDIR"
-cp -r --parents /var/log/starface/openfire "$TMPDIR"
-cp -r --parents /var/log/starface/postgresql "$TMPDIR"
-cp -r --parents /var/starface/fs-interface "$TMPDIR"
-cp -r --parents /var/spool/hylafax/log "$TMPDIR"
-cp -r --parents /var/log/starface "$TMPDIR"  # GANZER STARFACE-LOGORDNER
+# Logs & Verzeichnisse sammeln
+mkdir -p "$TMPDIR/var"
 
-# Einzeldateien inkl. Rotationen
-find /var/log/starface/ -type f -name "messages*" -exec cp --parents {} "$TMPDIR" \;
-find /var/log/starface/ -type f -name "maillog" -exec cp --parents {} "$TMPDIR" \;
-find /var/log/starface/ -type f -name "kamailio.log*" -exec cp --parents {} "$TMPDIR" \;
+# Kopiere ganze Verzeichnisse (rekursiv & mit Pfad)
+rsync -a /var/log/asterisk/ "$TMPDIR/var/log/asterisk/"
+rsync -a /var/log/starface/ "$TMPDIR/var/log/starface/"
+rsync -a /var/log/openfire/ "$TMPDIR/var/log/openfire/"
+rsync -a /var/log/postgresql/ "$TMPDIR/var/log/postgresql/"
+rsync -a /var/starface/fs-interface/ "$TMPDIR/var/starface/fs-interface/"
+rsync -a /var/spool/hylafax/log/ "$TMPDIR/var/spool/hylafax/log/"
 
-# Modul-Logs
-find /var/starface/module/instances/repo/ -type f -path "*/log/log.log" -exec cp --parents {} "$TMPDIR" \;
+# Einzeldateien sammeln
+mkdir -p "$TMPDIR/var/log/starface"
+cp -a /var/log/starface/messages* "$TMPDIR/var/log/starface/" 2>/dev/null
+cp -a /var/log/starface/maillog "$TMPDIR/var/log/starface/" 2>/dev/null
+cp -a /var/log/starface/kamailio.log* "$TMPDIR/var/log/starface/" 2>/dev/null
 
-# 2. Systeminformationen sammeln
-echo "[+] Sammle Systeminformationen..."
-SYSINFO="$TMPDIR/systeminfo.txt"
+# Modul-Logs sammeln
+find /var/starface/module/instances/repo/ -type f -path "*/log/log.log" -exec bash -c '
+  for filepath; do
+    relpath="${filepath#/}"
+    mkdir -p "'$TMPDIR'/$(dirname "$relpath")"
+    cp -a "$filepath" "'$TMPDIR'/$relpath"
+  done
+' bash {} +
 
+# Systeminformationen sammeln
+SYSINFO="${TMPDIR}/systeminfo.txt"
 {
   echo "Hostname: $(hostname)"
   echo
@@ -37,42 +46,43 @@ SYSINFO="$TMPDIR/systeminfo.txt"
   ip a
   echo
   echo "Externe IP:"
-  curl -s https://api.ipify.org
+  curl -s https://api.ipify.org || echo "Fehler beim Abruf"
   echo
-  echo "Festplatte:"
-  df -h
+  echo "Freier Speicher (Festplatte):"
+  df -h /
   echo
-  echo "RAM:"
+  echo "Freier Speicher (Inodes):"
+  df -ih /
+  echo
+  echo "Freier RAM:"
   free -h
-  echo
-  echo "Inodes:"
-  df -i
   echo
   echo "System Load:"
   uptime
   echo
   echo "Laufende Prozesse:"
-  ps auxf
+  ps aux --sort=-%mem | head -n 30
   echo
   echo "Laufende Java-Prozesse:"
-  ps -eo pid,cmd | grep java | grep -v grep
+  pgrep -a java || echo "Keine Java-Prozesse gefunden"
 } > "$SYSINFO"
 
-# 3. ZIP erstellen
-echo "[+] Erstelle Archiv $ZIPFILE..."
-cd "$TMPDIR"/..
-zip -r "$ZIPFILE" "$(basename "$TMPDIR")" >/dev/null
+# ZIP erstellen
+echo "Erstelle ZIP-Datei: $ZIPPFAD"
+cd "$TMPDIR/.." || exit 1
+zip -r "$ZIPPFAD" "$(basename "$TMPDIR")" >/dev/null
 
-# 4. Aufräumen
-rm -rf "$TMPDIR"
-
-# 5. Hinweis zum Entpacken
+# Hinweis zum Entpacken
 echo
-echo "[✓] Log-Archiv wurde erstellt: $ZIPFILE"
-echo "Zum Entpacken verwende z. B.:"
-echo "unzip $ZIPFILE -d \"${ZIPFILE%.zip}\""
+echo "FERTIG: Logs wurden gepackt in:"
+echo "  $ZIPPFAD"
+echo
+echo "Du kannst sie entpacken mit:"
+echo "  unzip \"$ZIPPFAD\" -d \"/tmp/$(basename "$TMPDIR")\""
 echo
 
-# 6. Skript selbst löschen
-echo "[*] Entferne mich selbst: $0"
-rm -- "$0"
+# Aufräumen: Script selbst löschen
+if [[ $0 == /tmp/* ]]; then
+  echo "Entferne Script: $0"
+  rm -f "$0"
+fi

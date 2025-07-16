@@ -41,6 +41,81 @@ cp -r --parents /var/starface/fs-interface "$TMPDIR"
 # 9. Hylafax log Ordner
 cp -r --parents /var/spool/hylafax/log "$TMPDIR"
 
+# 10. Systeminfo erfassen
+SYSINFO="$TMPDIR/systeminfo.txt"
+
+{
+  echo "### Hostname"
+  hostname
+  echo
+
+  echo "### IP-Adressen (ip a)"
+  ip a
+  echo
+
+  echo "### Externe IP-Adresse"
+  curl -s ifconfig.me || echo "Nicht ermittelbar"
+  echo
+
+  echo "### Festplattennutzung"
+  df -h
+  echo
+
+  echo "### Inodes"
+  df -i
+  echo
+
+  echo "### RAM + Swap"
+  free -h
+  echo
+
+  echo "### Systemlast"
+  uptime
+  echo
+
+  echo "### Laufende Prozesse"
+  ps aux
+  echo
+
+  echo "### Laufende Java-Prozesse"
+  ps aux | grep [j]ava || echo "Keine Java-Prozesse gefunden"
+  echo
+
+} > "$SYSINFO"
+
+# Weitere Support-Dateien
+
+# IP-Routen
+ip r > "$TMPDIR/ip_routes.txt"
+
+# DNS-Status
+if command -v resolvectl &>/dev/null; then
+  resolvectl status > "$TMPDIR/dns_status.txt"
+else
+  cat /etc/resolv.conf > "$TMPDIR/dns_status.txt"
+fi
+
+# NTP/Zeit
+{
+  echo "### timedatectl"
+  timedatectl
+  echo
+  echo "### chronyc tracking"
+  chronyc tracking 2>/dev/null || echo "chronyc nicht verfügbar"
+} > "$TMPDIR/ntp_status.txt"
+
+# Top CPU/RAM Prozesse
+ps -eo pid,ppid,cmd,%mem,%cpu --sort=-%cpu | head -n 15 > "$TMPDIR/top_processes.txt"
+
+# Services mit Fehlerstatus
+systemctl list-units --type=service --state=failed > "$TMPDIR/services_failed.txt"
+
+# Offene Ports
+ss -tulpen > "$TMPDIR/ports.txt"
+
+# Geänderte Dateien unter /etc
+find /etc -type f -printf "%T@ %Tc %p\n" 2>/dev/null | sort -n | tail -n 20 > "$TMPDIR/recent_changes_etc.txt"
+
 # ZIP erstellen
 cd "$TMPDIR" || exit 1
 zip -r "$ZIPFILE" . > /dev/null

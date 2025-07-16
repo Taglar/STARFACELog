@@ -88,11 +88,11 @@ SYSINFO="$TMPDIR/systeminfo.txt"
 # IP-Routen
 ip r > "$TMPDIR/ip_routes.txt"
 
-# DNS-Status (resolvectl oder Fallback)
-if command -v resolvectl &>/dev/null && resolvectl status &>/dev/null; then
+# DNS-Status (resolvectl nur, wenn systemd-resolved aktiv ist)
+if systemctl is-active --quiet systemd-resolved.service; then
   resolvectl status > "$TMPDIR/dns_status.txt"
 else
-  echo "resolvectl nicht verfügbar – Fallback auf /etc/resolv.conf" > "$TMPDIR/dns_status.txt"
+  echo "systemd-resolved nicht aktiv – Fallback auf /etc/resolv.conf" > "$TMPDIR/dns_status.txt"
   cat /etc/resolv.conf >> "$TMPDIR/dns_status.txt"
 fi
 

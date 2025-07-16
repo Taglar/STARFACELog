@@ -1,141 +1,78 @@
 #!/bin/bash
 
-# Ziel-Dateiname mit Zeitstempel im gewünschten Verzeichnis
-ZIPFILE="/tmp/logs_$(date +%Y-%m-%d_%H-%M).zip"
-ZIPNAME=$(basename "$ZIPFILE")
-UNZIP_DIR="${ZIPFILE%.zip}"
+# Setze Zielpfad
+DATE=$(date +"%Y-%m-%d_%H-%M")
+ZIPFILE="/tmp/logs_${DATE}.zip"
+TMPDIR="/tmp/logs_${DATE}"
 
-# Temporäres Arbeitsverzeichnis
-TMPDIR=$(mktemp -d)
+mkdir -p "$TMPDIR"
 
-echo "📁 Sammle Dateien in $TMPDIR ..."
+# 1. Logs sammeln
+echo "[+] Sammle Log-Dateien..."
 
-# 1. Kompletter Ordner /var/log/asterisk/
+# Verzeichnisse
 cp -r --parents /var/log/asterisk "$TMPDIR"
-
-# 1b. Kompletter Ordner /var/log/starface/
-cp -r --parents /var/log/starface "$TMPDIR"
-
-# 2. /var/log/messages*
-cp --parents /var/log/messages* "$TMPDIR" 2>/dev/null
-
-# 3. /var/log/maillog
-cp --parents /var/log/maillog "$TMPDIR" 2>/dev/null
-
-# 4. /var/log/kamailio.log*
-cp --parents /var/log/kamailio.log* "$TMPDIR" 2>/dev/null
-
-# 5. Ordner openfire (direkt in /var/log/)
-cp -r --parents /var/log/openfire "$TMPDIR"
-
-# 6. Ordner postgresql (direkt in /var/log/)
-cp -r --parents /var/log/postgresql "$TMPDIR"
-
-# 7. Alle log.log aus repo/*/log/
-for file in /var/starface/module/instances/repo/*/log/log.log; do
-  if [[ -f "$file" ]]; then
-    cp --parents "$file" "$TMPDIR"
-  fi
-done
-
-# 8. fs-interface Ordner
+cp -r --parents /var/log/starface/openfire "$TMPDIR"
+cp -r --parents /var/log/starface/postgresql "$TMPDIR"
 cp -r --parents /var/starface/fs-interface "$TMPDIR"
-
-# 9. Hylafax log Ordner
 cp -r --parents /var/spool/hylafax/log "$TMPDIR"
+cp -r --parents /var/log/starface "$TMPDIR"  # GANZER STARFACE-LOGORDNER
 
-# 10. Systeminfo erfassen
+# Einzeldateien inkl. Rotationen
+find /var/log/starface/ -type f -name "messages*" -exec cp --parents {} "$TMPDIR" \;
+find /var/log/starface/ -type f -name "maillog" -exec cp --parents {} "$TMPDIR" \;
+find /var/log/starface/ -type f -name "kamailio.log*" -exec cp --parents {} "$TMPDIR" \;
+
+# Modul-Logs
+find /var/starface/module/instances/repo/ -type f -path "*/log/log.log" -exec cp --parents {} "$TMPDIR" \;
+
+# 2. Systeminformationen sammeln
+echo "[+] Sammle Systeminformationen..."
 SYSINFO="$TMPDIR/systeminfo.txt"
 
 {
-  echo "### Hostname"
-  hostname
+  echo "Hostname: $(hostname)"
   echo
-
-  echo "### IP-Adressen (ip a)"
+  echo "IP-Adressen:"
   ip a
   echo
-
-  echo "### Externe IP-Adresse"
-  curl -s ifconfig.me || echo "Nicht ermittelbar"
+  echo "Externe IP:"
+  curl -s https://api.ipify.org
   echo
-
-  echo "### Festplattennutzung"
+  echo "Festplatte:"
   df -h
   echo
-
-  echo "### Inodes"
-  df -i
-  echo
-
-  echo "### RAM + Swap"
+  echo "RAM:"
   free -h
   echo
-
-  echo "### Systemlast"
+  echo "Inodes:"
+  df -i
+  echo
+  echo "System Load:"
   uptime
   echo
-
-  echo "### Laufende Prozesse"
-  ps aux
+  echo "Laufende Prozesse:"
+  ps auxf
   echo
-
-  echo "### Laufende Java-Prozesse"
-  ps aux | grep [j]ava || echo "Keine Java-Prozesse gefunden"
-  echo
-
+  echo "Laufende Java-Prozesse:"
+  ps -eo pid,cmd | grep java | grep -v grep
 } > "$SYSINFO"
 
-# Weitere Support-Dateien
+# 3. ZIP erstellen
+echo "[+] Erstelle Archiv $ZIPFILE..."
+cd "$TMPDIR"/..
+zip -r "$ZIPFILE" "$(basename "$TMPDIR")" >/dev/null
 
-# IP-Routen
-ip r > "$TMPDIR/ip_routes.txt"
-
-# DNS-Status (resolvectl oder Fallback)
-if systemctl is-active --quiet systemd-resolved.service; then
-  resolvectl status > "$TMPDIR/dns_status.txt"
-else
-  echo "systemd-resolved nicht aktiv – Fallback auf /etc/resolv.conf" > "$TMPDIR/dns_status.txt"
-  cat /etc/resolv.conf >> "$TMPDIR/dns_status.txt"
-fi
-
-# NTP/Zeit
-{
-  echo "### timedatectl"
-  timedatectl
-  echo
-  echo "### chronyc tracking"
-  chronyc tracking 2>/dev/null || echo "chronyc nicht verfügbar"
-} > "$TMPDIR/ntp_status.txt"
-
-# Top CPU/RAM Prozesse
-ps -eo pid,ppid,cmd,%mem,%cpu --sort=-%cpu | head -n 15 > "$TMPDIR/top_processes.txt"
-
-# Services mit Fehlerstatus
-systemctl list-units --type=service --state=failed > "$TMPDIR/services_failed.txt"
-
-# Offene Ports
-ss -tulpen > "$TMPDIR/ports.txt"
-
-# Geänderte Dateien unter /etc
-find /etc -type f -printf "%T@ %Tc %p\n" 2>/dev/null | sort -n | tail -n 20 > "$TMPDIR/recent_changes_etc.txt"
-
-# ZIP erstellen
-cd "$TMPDIR" || exit 1
-zip -r "$ZIPFILE" . > /dev/null
-
-# Aufräumen
-cd /
+# 4. Aufräumen
 rm -rf "$TMPDIR"
 
-# Abschlussmeldung
-echo "✅ Archiv wurde erstellt: $ZIPFILE"
-echo ""
-echo "📦 Du kannst das Archiv mit folgendem Befehl entpacken:"
-echo "unzip $ZIPFILE -d \"$UNZIP_DIR\""
+# 5. Hinweis zum Entpacken
+echo
+echo "[✓] Log-Archiv wurde erstellt: $ZIPFILE"
+echo "Zum Entpacken verwende z. B.:"
+echo "unzip $ZIPFILE -d \"${ZIPFILE%.zip}\""
+echo
 
-# Script selbst löschen (wenn direkt aufgerufen, nicht gesourced)
-if [[ "$0" == /*tmp/* && -f "$0" ]]; then
-  echo "🧹 Lösche das Skript selbst: $0"
-  rm -- "$0"
-fi
+# 6. Skript selbst löschen
+echo "[*] Entferne mich selbst: $0"
+rm -- "$0"

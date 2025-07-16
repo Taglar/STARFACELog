@@ -13,6 +13,9 @@ echo "📁 Sammle Dateien in $TMPDIR ..."
 # 1. Kompletter Ordner /var/log/asterisk/
 cp -r --parents /var/log/asterisk "$TMPDIR"
 
+# 1b. Kompletter Ordner /var/log/starface/
+cp -r --parents /var/log/starface "$TMPDIR"
+
 # 2. /var/log/messages*
 cp --parents /var/log/messages* "$TMPDIR" 2>/dev/null
 
@@ -88,7 +91,7 @@ SYSINFO="$TMPDIR/systeminfo.txt"
 # IP-Routen
 ip r > "$TMPDIR/ip_routes.txt"
 
-# DNS-Status (resolvectl nur, wenn systemd-resolved aktiv ist)
+# DNS-Status (resolvectl oder Fallback)
 if systemctl is-active --quiet systemd-resolved.service; then
   resolvectl status > "$TMPDIR/dns_status.txt"
 else

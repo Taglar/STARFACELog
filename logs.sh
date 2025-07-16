@@ -6,29 +6,28 @@ ZIPNAME="logs_${DATUM}.zip"
 TMPDIR="/tmp/logs_${DATUM}"
 ZIPPFAD="/tmp/${ZIPNAME}"
 
-# Verzeichnisse vorbereiten
+# Temporäres Verzeichnis vorbereiten
 mkdir -p "$TMPDIR"
 
-echo "Sammle Logdaten..."
+echo "📁 Sammle Logdateien..."
 
-# Logs & Verzeichnisse sammeln
-mkdir -p "$TMPDIR/var"
-
-# Kopiere ganze Verzeichnisse (rekursiv & mit Pfad)
+# 1. Komplette Verzeichnisse kopieren
 rsync -a /var/log/asterisk/ "$TMPDIR/var/log/asterisk/"
 rsync -a /var/log/starface/ "$TMPDIR/var/log/starface/"
-rsync -a /var/log/openfire/ "$TMPDIR/var/log/openfire/"
-rsync -a /var/log/postgresql/ "$TMPDIR/var/log/postgresql/"
 rsync -a /var/starface/fs-interface/ "$TMPDIR/var/starface/fs-interface/"
 rsync -a /var/spool/hylafax/log/ "$TMPDIR/var/spool/hylafax/log/"
 
-# Einzeldateien sammeln
-mkdir -p "$TMPDIR/var/log/starface"
-cp -a /var/log/starface/messages* "$TMPDIR/var/log/starface/" 2>/dev/null
-cp -a /var/log/starface/maillog "$TMPDIR/var/log/starface/" 2>/dev/null
-cp -a /var/log/starface/kamailio.log* "$TMPDIR/var/log/starface/" 2>/dev/null
+# 2. Symlinks für openfire und postgresql folgen (wenn vorhanden)
+[[ -d /var/log/openfire ]] && rsync -Lra /var/log/openfire/ "$TMPDIR/var/log/openfire/"
+[[ -d /var/log/postgresql ]] && rsync -Lra /var/log/postgresql/ "$TMPDIR/var/log/postgresql/"
 
-# Modul-Logs sammeln
+# 3. Einzelne Logdateien aus /var/log/
+mkdir -p "$TMPDIR/var/log"
+cp -a /var/log/messages* "$TMPDIR/var/log/" 2>/dev/null
+cp -a /var/log/maillog "$TMPDIR/var/log/" 2>/dev/null
+cp -a /var/log/kamailio.log* "$TMPDIR/var/log/" 2>/dev/null
+
+# 4. Modul-Logdateien (log.log aus jedem Modulpfad)
 find /var/starface/module/instances/repo/ -type f -path "*/log/log.log" -exec bash -c '
   for filepath; do
     relpath="${filepath#/}"
@@ -37,52 +36,101 @@ find /var/starface/module/instances/repo/ -type f -path "*/log/log.log" -exec ba
   done
 ' bash {} +
 
-# Systeminformationen sammeln
+# 5. Systeminformationen erfassen
 SYSINFO="${TMPDIR}/systeminfo.txt"
+echo "🧠 Erfasse Systeminformationen..."
 {
-  echo "Hostname: $(hostname)"
+  echo "### Hostname"
+  hostname
   echo
-  echo "IP-Adressen:"
+
+  echo "### IP-Adressen (ip a)"
   ip a
   echo
-  echo "Externe IP:"
+
+  echo "### Externe IP-Adresse"
   curl -s https://api.ipify.org || echo "Fehler beim Abruf"
   echo
-  echo "Freier Speicher (Festplatte):"
-  df -h /
+
+  echo "### Festplattennutzung"
+  df -h
   echo
-  echo "Freier Speicher (Inodes):"
-  df -ih /
+
+  echo "### Inodes"
+  df -i
   echo
-  echo "Freier RAM:"
+
+  echo "### RAM + Swap"
   free -h
   echo
-  echo "System Load:"
+
+  echo "### Systemlast"
   uptime
   echo
-  echo "Laufende Prozesse:"
-  ps aux --sort=-%mem | head -n 30
+
+  echo "### Laufende Prozesse"
+  ps aux
   echo
-  echo "Laufende Java-Prozesse:"
+
+  echo "### Laufende Java-Prozesse"
   pgrep -a java || echo "Keine Java-Prozesse gefunden"
+  echo
+
+  echo "### Routing-Tabelle"
+  ip r
+  echo
+
+  echo "### DNS-Status"
+  if systemctl is-active --quiet systemd-resolved.service; then
+    resolvectl status
+  else
+    echo "systemd-resolved nicht aktiv – zeige /etc/resolv.conf"
+    cat /etc/resolv.conf
+  fi
+  echo
+
+  echo "### Zeitstatus"
+  timedatectl
+  echo
+  echo "### chronyc tracking"
+  chronyc tracking 2>/dev/null || echo "chronyc nicht verfügbar"
+  echo
+
+  echo "### Top-Prozesse nach CPU"
+  ps -eo pid,ppid,cmd,%mem,%cpu --sort=-%cpu | head -n 15
+  echo
+
+  echo "### Fehlgeschlagene Services"
+  systemctl list-units --type=service --state=failed || echo "Keine fehlgeschlagenen Services"
+  echo
+
+  echo "### Offene Ports"
+  ss -tulpen
+  echo
+
+  echo "### Letzte Änderungen in /etc"
+  find /etc -type f -printf "%T@ %Tc %p\n" 2>/dev/null | sort -n | tail -n 20
+  echo
+
 } > "$SYSINFO"
 
-# ZIP erstellen
-echo "Erstelle ZIP-Datei: $ZIPPFAD"
+# 6. Archiv erstellen
+echo "📦 Erstelle ZIP: $ZIPPFAD"
 cd "$TMPDIR/.." || exit 1
 zip -r "$ZIPPFAD" "$(basename "$TMPDIR")" >/dev/null
 
-# Hinweis zum Entpacken
+# 7. Aufräumen
+rm -rf "$TMPDIR"
+
+# 8. Abschlussmeldung
 echo
-echo "FERTIG: Logs wurden gepackt in:"
-echo "  $ZIPPFAD"
-echo
-echo "Du kannst sie entpacken mit:"
-echo "  unzip \"$ZIPPFAD\" -d \"/tmp/$(basename "$TMPDIR")\""
+echo "✅ Archiv erstellt unter: $ZIPPFAD"
+echo "📂 Entpacken mit:"
+echo "unzip $ZIPPFAD -d \"${ZIPPFAD%.zip}\""
 echo
 
-# Aufräumen: Script selbst löschen
-if [[ $0 == /tmp/* ]]; then
-  echo "Entferne Script: $0"
+# 9. Selbstlöschung
+if [[ "$0" == /tmp/* && -f "$0" ]]; then
+  echo "🧹 Lösche Script selbst: $0"
   rm -f "$0"
 fi

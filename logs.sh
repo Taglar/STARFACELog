@@ -2,6 +2,8 @@
 
 # Ziel-Dateiname mit Zeitstempel im gewünschten Verzeichnis
 ZIPFILE="/tmp/logs_$(date +%Y-%m-%d_%H-%M).zip"
+ZIPNAME=$(basename "$ZIPFILE")
+UNZIP_DIR="${ZIPFILE%.zip}"
 
 # Temporäres Arbeitsverzeichnis
 TMPDIR=$(mktemp -d)
@@ -47,4 +49,14 @@ zip -r "$ZIPFILE" . > /dev/null
 cd /
 rm -rf "$TMPDIR"
 
-echo "✅ Archiv wurde erstellt unter: $ZIPFILE"
+# Abschlussmeldung
+echo "✅ Archiv wurde erstellt: $ZIPFILE"
+echo ""
+echo "📦 Du kannst das Archiv mit folgendem Befehl entpacken:"
+echo "unzip $ZIPFILE -d \"$UNZIP_DIR\""
+
+# Script selbst löschen (wenn direkt aufgerufen, nicht gesourced)
+if [[ "$0" == /*tmp/* && -f "$0" ]]; then
+  echo "🧹 Lösche das Skript selbst: $0"
+  rm -- "$0"
+fi

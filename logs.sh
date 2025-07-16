@@ -11,17 +11,25 @@ mkdir -p "$TMPDIR"
 
 echo "📁 Sammle Logdateien..."
 
+# Zielverzeichnisse anlegen, damit rsync nicht scheitert
+mkdir -p "$TMPDIR/var/log/asterisk"
+mkdir -p "$TMPDIR/var/log/starface"
+mkdir -p "$TMPDIR/var/starface/fs-interface"
+mkdir -p "$TMPDIR/var/spool/hylafax/log"
+mkdir -p "$TMPDIR/var/log/openfire"
+mkdir -p "$TMPDIR/var/log/postgresql"
+
 # 1. Komplette Verzeichnisse kopieren
 rsync -a /var/log/asterisk/ "$TMPDIR/var/log/asterisk/"
 rsync -a /var/log/starface/ "$TMPDIR/var/log/starface/"
 rsync -a /var/starface/fs-interface/ "$TMPDIR/var/starface/fs-interface/"
 rsync -a /var/spool/hylafax/log/ "$TMPDIR/var/spool/hylafax/log/"
 
-# 2. Symlinks für openfire und postgresql folgen (wenn vorhanden)
+# 2. Symlinks folgen (falls vorhanden)
 [[ -d /var/log/openfire ]] && rsync -Lra /var/log/openfire/ "$TMPDIR/var/log/openfire/"
 [[ -d /var/log/postgresql ]] && rsync -Lra /var/log/postgresql/ "$TMPDIR/var/log/postgresql/"
 
-# 3. Einzelne Logdateien aus /var/log/
+# 3. Einzeldateien aus /var/log/
 mkdir -p "$TMPDIR/var/log"
 cp -a /var/log/messages* "$TMPDIR/var/log/" 2>/dev/null
 cp -a /var/log/maillog "$TMPDIR/var/log/" 2>/dev/null

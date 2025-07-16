@@ -89,10 +89,11 @@ SYSINFO="$TMPDIR/systeminfo.txt"
 ip r > "$TMPDIR/ip_routes.txt"
 
 # DNS-Status
-if command -v resolvectl &>/dev/null; then
+if command -v resolvectl &>/dev/null && resolvectl status &>/dev/null; then
   resolvectl status > "$TMPDIR/dns_status.txt"
 else
-  cat /etc/resolv.conf > "$TMPDIR/dns_status.txt"
+  echo "resolvectl nicht verfügbar – Fallback auf /etc/resolv.conf" > "$TMPDIR/dns_status.txt"
+  cat /etc/resolv.conf >> "$TMPDIR/dns_status.txt"
 fi
 
 # NTP/Zeit

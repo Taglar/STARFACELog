@@ -5,7 +5,7 @@ DATUM=$(date '+%Y-%m-%d_%H-%M-%S')
 ZIPNAME="logs_${DATUM}.zip"
 TMPDIR="/tmp/logs_${DATUM}"
 ZIPPFAD="/tmp/${ZIPNAME}"
-ZIELDIR="/tmp/SFLogs/${DATUM}"
+ENTPACKPFAD="/tmp/SFLogs/${DATUM}"
 
 echo "📁 Erstelle temporäres Verzeichnis: $TMPDIR"
 mkdir -p "$TMPDIR"
@@ -37,7 +37,7 @@ cp -a /var/log/messages* "$TMPDIR/var/log/" 2>/dev/null
 cp -a /var/log/maillog "$TMPDIR/var/log/" 2>/dev/null
 cp -a /var/log/kamailio.log* "$TMPDIR/var/log/" 2>/dev/null
 
-# 4. Modul-Logdateien sammeln
+# 4. Modul-Logdateien sammeln (log.log aus Modulen)
 echo "🔍 Sammle log.log aus Modulen..."
 find /var/starface/module/instances/repo/ -type f -path "*/log/log.log" -exec bash -c '
   for filepath; do
@@ -70,30 +70,30 @@ SYSINFO="${TMPDIR}/systeminfo.txt"
   echo "### Änderungen in /etc"; find /etc -type f -printf "%T@ %Tc %p\n" 2>/dev/null | sort -n | tail -n 20; echo
 } > "$SYSINFO"
 
-# 6. Asterisk-Informationen erfassen
-echo "📓 Erfasse Asterisk-Informationen..."
+# 6. Asteriskinfos erfassen
 ASTERISKINFO="${TMPDIR}/asteriskinfo.txt"
 {
-  echo "### Asterisk: core show sysinfo"; rasterisk -x 'core show sysinfo'; echo
-  echo "### Asterisk: core show uptime"; rasterisk -x 'core show uptime'; echo
-  echo "### Asterisk: core show channels"; rasterisk -x 'core show channels'; echo
-  echo "### Asterisk: core show threads"; rasterisk -x 'core show threads'; echo
-  echo "### Asterisk: core show hints"; rasterisk -x 'core show hints'; echo
+  echo "### Asterisk core show sysinfo"; rasterisk -x 'core show sysinfo'; echo
+  echo "### Asterisk core show uptime"; rasterisk -x 'core show uptime'; echo
+  echo "### Asterisk core show threads"; rasterisk -x 'core show threads'; echo
+  echo "### Asterisk core show hints"; rasterisk -x 'core show hints'; echo
+  echo "### Asterisk core show channels"; rasterisk -x 'core show channels'; echo
 } > "$ASTERISKINFO"
 
-# 7. ZIP erstellen (nur Inhalt von TMPDIR, keine doppelte Struktur)
+# 7. ZIP erstellen (ohne zusätzlichen Unterordner im Archiv)
 echo "📦 Erstelle ZIP: $ZIPPFAD"
-cd "$TMPDIR" && zip -r "$ZIPPFAD" . >/dev/null
+cd "$TMPDIR"
+zip -r "$ZIPPFAD" . >/dev/null
 
-# 8. Aufräumen temporäres Verzeichnis
+# 8. Aufräumen
 rm -rf "$TMPDIR"
 
-# 9. Abschlussmeldung inkl. korrektem Entpackpfad
+# 9. Hinweis & Entpack-Hilfe
 echo
 echo "✅ Archiv erstellt: $ZIPPFAD"
 echo "################################################################################"
 echo "📂 Entpacken mit:"
-echo "mkdir -p \"$ZIELDIR\" && unzip $ZIPPFAD -d \"$ZIELDIR\""
+echo "mkdir -p \"$ENTPACKPFAD\" && unzip \"$ZIPPFAD\" -d \"$ENTPACKPFAD\""
 echo "################################################################################"
 echo
 

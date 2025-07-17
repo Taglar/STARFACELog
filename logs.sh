@@ -22,6 +22,7 @@ mkdir -p "$TMPDIR/var/log/postgresql"
 # 1. Komplette Verzeichnisse kopieren
 echo "📥 Kopiere vollständige Verzeichnisse..."
 rsync -a /var/log/asterisk/ "$TMPDIR/var/log/asterisk/" 2>/dev/null
+rsync -a /var/log/tomcat/ "$TMPDIR/var/log/tomcat/" 2>/dev/null
 rsync -a /var/log/starface/ "$TMPDIR/var/log/starface/" 2>/dev/null
 rsync -a /var/starface/fs-interface/ "$TMPDIR/var/starface/fs-interface/" 2>/dev/null
 rsync -a /var/spool/hylafax/log/ "$TMPDIR/var/spool/hylafax/log/" 2>/dev/null

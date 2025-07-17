@@ -83,7 +83,7 @@ ASTERISKINFO="${TMPDIR}/asteriskinfo.txt"
 
 # 7. ZIP erstellen (nur Inhalt, nicht Verzeichnis selbst)
 echo "📦 Erstelle ZIP: $ZIPPFAD"
-cd "$(dirname "$TMPDIR")" && zip -r "$ZIPPFAD" "$(basename "$TMPDIR")" >/dev/null
+cd "$TMPDIR" && zip -r "$ZIPPFAD" . >/dev/null
 
 # 8. Temporären Ordner löschen
 rm -rf "$TMPDIR"

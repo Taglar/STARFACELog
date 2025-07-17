@@ -1,6 +1,6 @@
 # 🧰 STARFACE Log-Sammelscript
 
-Dieses Bash-Script sammelt automatisiert relevante Log- und Systeminformationen einer STARFACE-Anlage zur Fehlerdiagnose im 1st, 2nd oder 3rd Level Support.
+Dieses Bash-Script sammelt automatisiert relevante Log- und Systeminformationen einer STARFACE-Anlage zur eigenen Fehlerdiagnose.
 
 ---
 
@@ -14,7 +14,7 @@ bash <(curl -s https://raw.githubusercontent.com/Taglar/STARFACELog/main/logs.sh
 
 ## 📆 Zweck
 
-Das Script erstellt ein ZIP-Archiv mit sämtlichen relevanten Informationen, die zur Analyse von Fehlern oder zur Vorbereitung auf ein Support-Ticket notwendig sind.
+Das Script erstellt ein ZIP-Archiv mit sämtlichen relevanten Informationen zur Selbstanalyse von Fehlern bzw. Problemen.
 
 ---
 

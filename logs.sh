@@ -69,6 +69,40 @@ SYSINFO="${TMPDIR}/systeminfo.txt"
   echo "### Änderungen in /etc"; find /etc -type f -printf "%T@ %Tc %p\n" 2>/dev/null | sort -n | tail -n 20; echo
 } > "$SYSINFO"
 
+# 5b. Asterisk-Informationen erfassen
+echo "📞 Erfasse Asterisk-Daten..."
+ASTERISKINFO="${TMPDIR}/asteriskinfo.txt"
+{
+  echo "### Asterisk Systeminfo"
+  rasterisk -x "core show sysinfo"
+  echo
+
+  echo "### Asterisk Uptime"
+  rasterisk -x "core show uptime"
+  echo
+
+  echo "### Asterisk Threads"
+  rasterisk -x "core show threads"
+  echo
+
+  echo "### Asterisk Channels"
+  rasterisk -x "core show channels"
+  echo
+
+  echo "### Asterisk Hints (BLF)"
+  rasterisk -x "core show hints"
+  echo
+
+  echo "### SIP Peers (falls vorhanden)"
+  rasterisk -x "sip show peers" 2>/dev/null || echo "SIP nicht aktiviert"
+  echo
+
+  echo "### Taskprocessors (Überlastung erkennbar)"
+  rasterisk -x "core show taskprocessors"
+  echo
+
+} > "$ASTERISKINFO"
+
 # 6. Archiv erstellen
 echo "📦 Erstelle ZIP: $ZIPPFAD"
 cd "$(dirname "$TMPDIR")" && zip -r "$ZIPPFAD" "$(basename "$TMPDIR")" >/dev/null

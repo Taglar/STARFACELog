@@ -3,8 +3,9 @@
 # Zeitstempel & Pfade
 DATUM=$(date '+%Y-%m-%d_%H-%M-%S')
 ZIPNAME="logs_${DATUM}.zip"
-TMPDIR="/tmp/SFLogs/${DATUM}"
+TMPDIR="/tmp/logs_${DATUM}"
 ZIPPFAD="/tmp/${ZIPNAME}"
+ENTPACKPFAD="/tmp/SFLogs/${DATUM}"
 
 echo "📁 Erstelle temporäres Verzeichnis: $TMPDIR"
 mkdir -p "$TMPDIR"

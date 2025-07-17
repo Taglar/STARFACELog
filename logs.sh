@@ -13,6 +13,7 @@ mkdir -p "$TMPDIR"
 # Verzeichnisstruktur vorbereiten
 echo "📁 Erstelle Zielverzeichnisse..."
 mkdir -p "$TMPDIR/var/log/asterisk"
+mkdir -p "$TMPDIR/var/log/tomcat"
 mkdir -p "$TMPDIR/var/log/starface"
 mkdir -p "$TMPDIR/var/starface/fs-interface"
 mkdir -p "$TMPDIR/var/spool/hylafax/log"

@@ -106,10 +106,10 @@ rm -rf "$TMPDIR"
 # 8. Abschluss
 echo
 echo "✅ Archiv erstellt: $ZIPPFAD"
-echo "################################################################################"
+echo "####################################################################################"
 echo "📂 Entpacken mit:"
-echo "unzip $ZIPPFAD -d \"/tmp/SFLogs/$(basename "$ZIPPFAD" .zip)\""
-echo "################################################################################"
+echo "mkdir -p /tmp/SFLogs && unzip $ZIPPFAD -d \"/tmp/SFLogs/$(basename "$ZIPPFAD" .zip)\""
+echo "####################################################################################"
 echo
 
 # 9. Selbstlöschung

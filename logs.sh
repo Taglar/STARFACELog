@@ -93,7 +93,7 @@ echo
 echo "✅ Archiv erstellt: $ZIPPFAD"
 echo "################################################################################"
 echo "📂 Entpacken mit:"
-echo "unzip $ZIPPFAD -d \"$ZIELDIR\""
+echo "mkdir -p \"$ZIELDIR\" && unzip $ZIPPFAD -d \"$ZIELDIR\""
 echo "################################################################################"
 echo
 

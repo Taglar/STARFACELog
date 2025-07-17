@@ -3,9 +3,8 @@
 # Zeitstempel & Pfade
 DATUM=$(date '+%Y-%m-%d_%H-%M-%S')
 ZIPNAME="logs_${DATUM}.zip"
-TMPDIR="/tmp/logs_${DATUM}"
+TMPDIR="/tmp/SFLogs/${DATUM}"
 ZIPPFAD="/tmp/${ZIPNAME}"
-ENTPACKPFAD="/tmp/SFLogs/${DATUM}"
 
 echo "📁 Erstelle temporäres Verzeichnis: $TMPDIR"
 mkdir -p "$TMPDIR"
@@ -26,7 +25,7 @@ rsync -a /var/log/starface/ "$TMPDIR/var/log/starface/" 2>/dev/null
 rsync -a /var/starface/fs-interface/ "$TMPDIR/var/starface/fs-interface/" 2>/dev/null
 rsync -a /var/spool/hylafax/log/ "$TMPDIR/var/spool/hylafax/log/" 2>/dev/null
 
-# 2. Symlinks folgen für openfire/postgresql
+# 2. Symlinks folgen für openfire/postgresql (z. B. /opt/openfire/logs)
 echo "🔗 Kopiere openfire/postgresql falls vorhanden..."
 [[ -d /var/log/openfire ]] && rsync -Lra /var/log/openfire/ "$TMPDIR/var/log/openfire/"
 [[ -d /var/log/postgresql ]] && rsync -Lra /var/log/postgresql/ "$TMPDIR/var/log/postgresql/"
@@ -70,34 +69,51 @@ SYSINFO="${TMPDIR}/systeminfo.txt"
   echo "### Änderungen in /etc"; find /etc -type f -printf "%T@ %Tc %p\n" 2>/dev/null | sort -n | tail -n 20; echo
 } > "$SYSINFO"
 
-# 6. Asteriskinfos erfassen
+# 6. Asterisk-Infos sammeln
 ASTERISKINFO="${TMPDIR}/asteriskinfo.txt"
 {
-  echo "### Asterisk core show sysinfo"; rasterisk -x 'core show sysinfo'; echo
-  echo "### Asterisk core show uptime"; rasterisk -x 'core show uptime'; echo
-  echo "### Asterisk core show threads"; rasterisk -x 'core show threads'; echo
-  echo "### Asterisk core show hints"; rasterisk -x 'core show hints'; echo
-  echo "### Asterisk core show channels"; rasterisk -x 'core show channels'; echo
+  echo "### core show uptime"; echo "--------------------"; rasterisk -x 'core show uptime'; echo
+  echo "### core show sysinfo"; echo "---------------------"; rasterisk -x 'core show sysinfo'; echo
+  echo "### core show threads"; echo "----------------------"; rasterisk -x 'core show threads'; echo
+  echo "### core show hints"; echo "--------------------"; rasterisk -x 'core show hints'; echo
+  echo "### core show channels"; echo "-----------------------"; rasterisk -x 'core show channels'; echo
 } > "$ASTERISKINFO"
 
-# 7. ZIP erstellen (ohne zusätzlichen Unterordner im Archiv)
-echo "📦 Erstelle ZIP: $ZIPPFAD"
-cd "$TMPDIR"
-zip -r "$ZIPPFAD" . >/dev/null
+# 7. Speicherbelegungen prüfen
+FILEINFO="${TMPDIR}/files.txt"
+{
+  echo "### 📂 Fax-Verzeichnis: /var/spool/asterisk/fax"
+  du -sh /var/spool/asterisk/fax 2>/dev/null || echo "Nicht vorhanden"
+  find /var/spool/asterisk/fax -type f -exec du -h {} + 2>/dev/null | sort -hr | head -n 20 || true
+  echo
 
-# 8. Aufräumen
+  echo "### 📂 Voicemail-Verzeichnis: /var/spool/asterisk/voicemail"
+  du -sh /var/spool/asterisk/voicemail 2>/dev/null || echo "Nicht vorhanden"
+  find /var/spool/asterisk/voicemail -type f -exec du -h {} + 2>/dev/null | sort -hr | head -n 20 || true
+  echo
+
+  echo "### 📂 Backups: /home/starface/backup/Default/"
+  du -sh /home/starface/backup/Default 2>/dev/null || echo "Nicht vorhanden"
+  ls -lh /home/starface/backup/Default/*.sar 2>/dev/null || echo "Keine .sar-Dateien gefunden"
+} > "$FILEINFO"
+
+# 8. Archiv erstellen
+echo "📦 Erstelle ZIP: $ZIPPFAD"
+cd "$TMPDIR/.." && zip -r "$ZIPPFAD" "$(basename "$TMPDIR")" >/dev/null
+
+# 9. Aufräumen
 rm -rf "$TMPDIR"
 
-# 9. Hinweis & Entpack-Hilfe
+# 10. Abschluss
 echo
 echo "✅ Archiv erstellt: $ZIPPFAD"
 echo "################################################################################"
 echo "📂 Entpacken mit:"
-echo "mkdir -p \"$ENTPACKPFAD\" && unzip \"$ZIPPFAD\" -d \"$ENTPACKPFAD\""
+echo "unzip $ZIPPFAD -d \"/tmp/SFLogs/$(basename "$TMPDIR")\""
 echo "################################################################################"
 echo
 
-# 10. Selbstlöschung
+# 11. Selbstlöschung
 if [[ "$0" == /tmp/* && -f "$0" ]]; then
   echo "🧹 Lösche mich selbst: $0"
   rm -f "$0"

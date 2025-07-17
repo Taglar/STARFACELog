@@ -2,10 +2,10 @@
 
 # Zeitstempel & Pfade
 DATUM=$(date '+%Y-%m-%d_%H-%M-%S')
-ZIPNAME="logs_${DATUM}.zip"
 TMPDIR="/tmp/logs_${DATUM}"
+ZIPNAME="logs_${DATUM}.zip"
 ZIPPFAD="/tmp/${ZIPNAME}"
-ZIELENTPACK="/tmp/SFLogs/$(basename "$ZIPPFAD" .zip)"
+ZIELENTPACK="/tmp/SFLogs/logs_${DATUM}"
 
 echo "📁 Erstelle temporäres Verzeichnis: $TMPDIR"
 mkdir -p "$TMPDIR"
@@ -26,7 +26,7 @@ rsync -a /var/log/starface/ "$TMPDIR/var/log/starface/" 2>/dev/null
 rsync -a /var/starface/fs-interface/ "$TMPDIR/var/starface/fs-interface/" 2>/dev/null
 rsync -a /var/spool/hylafax/log/ "$TMPDIR/var/spool/hylafax/log/" 2>/dev/null
 
-# 2. Symlinks folgen für openfire/postgresql (z. B. /opt/openfire/logs)
+# 2. Symlinks folgen für openfire/postgresql (z. B. /opt/openfire/logs, /var/lib/pgsql/data/log)
 echo "🔗 Kopiere openfire/postgresql falls vorhanden..."
 [[ -d /var/log/openfire ]] && rsync -Lra /var/log/openfire/ "$TMPDIR/var/log/openfire/"
 [[ -d /var/log/postgresql ]] && rsync -Lra /var/log/postgresql/ "$TMPDIR/var/log/postgresql/"
@@ -37,7 +37,7 @@ cp -a /var/log/messages* "$TMPDIR/var/log/" 2>/dev/null
 cp -a /var/log/maillog "$TMPDIR/var/log/" 2>/dev/null
 cp -a /var/log/kamailio.log* "$TMPDIR/var/log/" 2>/dev/null
 
-# 4. Modul-Logdateien sammeln (log.log aus Modulen)
+# 4. Modul-Logdateien sammeln
 echo "🔍 Sammle log.log aus Modulen..."
 find /var/starface/module/instances/repo/ -type f -path "*/log/log.log" -exec bash -c '
   for filepath; do
@@ -70,30 +70,25 @@ SYSINFO="${TMPDIR}/systeminfo.txt"
   echo "### Änderungen in /etc"; find /etc -type f -printf "%T@ %Tc %p\n" 2>/dev/null | sort -n | tail -n 20; echo
 } > "$SYSINFO"
 
-# 6. Asterisk-Informationen erfassen
-echo "🧠 Erfasse Asterisk-Informationen..."
+# 6. Asterisk-Infos erfassen
+echo "📞 Erfasse Asterisk-Daten..."
 ASTERISKINFO="${TMPDIR}/asteriskinfo.txt"
 {
-  echo "### core show sysinfo"; echo "----------------------"
-  rasterisk -x 'core show sysinfo'; echo
-  echo "### core show uptime"; echo "---------------------"
-  rasterisk -x 'core show uptime'; echo
-  echo "### core show hints"; echo "--------------------"
-  rasterisk -x 'core show hints'; echo
-  echo "### core show channels"; echo "-----------------------"
-  rasterisk -x 'core show channels'; echo
-  echo "### core show threads"; echo "----------------------"
-  rasterisk -x 'core show threads'; echo
+  echo "### Asterisk: core show sysinfo"; rasterisk -x "core show sysinfo"; echo
+  echo "### Asterisk: core show uptime"; rasterisk -x "core show uptime"; echo
+  echo "### Asterisk: core show threads"; rasterisk -x "core show threads"; echo
+  echo "### Asterisk: core show channels"; rasterisk -x "core show channels"; echo
+  echo "### Asterisk: core show hints"; rasterisk -x "core show hints"; echo
 } > "$ASTERISKINFO"
 
-# 7. Archiv erstellen
+# 7. ZIP erstellen (nur Inhalt, nicht Verzeichnis selbst)
 echo "📦 Erstelle ZIP: $ZIPPFAD"
-cd "$(dirname "$TMPDIR")" && zip -r "$ZIPPFAD" "$(basename "$TMPDIR")" >/dev/null
+cd "$TMPDIR" && zip -r "$ZIPPFAD" . >/dev/null
 
-# 8. Aufräumen
+# 8. Temporären Ordner löschen
 rm -rf "$TMPDIR"
 
-# 9. Abschlussmeldung
+# 9. Abschlussmeldung mit korrektem Entpackbefehl
 echo
 echo "✅ Archiv erstellt: $ZIPPFAD"
 echo "################################################################################"
@@ -102,7 +97,7 @@ echo "mkdir -p /tmp/SFLogs && unzip $ZIPPFAD -d \"$ZIELENTPACK\""
 echo "################################################################################"
 echo
 
-# 10. Selbstlöschung
+# 10. Selbstlöschung, wenn im /tmp/ ausgeführt
 if [[ "$0" == /tmp/* && -f "$0" ]]; then
   echo "🧹 Lösche mich selbst: $0"
   rm -f "$0"

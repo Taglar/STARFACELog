@@ -79,8 +79,10 @@ rm -rf "$TMPDIR"
 # 8. Abschluss
 echo
 echo "✅ Archiv erstellt: $ZIPPFAD"
+echo "######################################################"
 echo "📂 Entpacken mit:"
 echo "unzip $ZIPPFAD -d \"${ZIPPFAD%.zip}\""
+echo "######################################################"
 echo
 
 # 9. Selbstlöschung

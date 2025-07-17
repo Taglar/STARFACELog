@@ -13,7 +13,6 @@ mkdir -p "$TMPDIR"
 # Verzeichnisstruktur vorbereiten
 echo "📁 Erstelle Zielverzeichnisse..."
 mkdir -p "$TMPDIR/var/log/asterisk"
-mkdir -p "$TMPDIR/var/log/tomcat"
 mkdir -p "$TMPDIR/var/log/starface"
 mkdir -p "$TMPDIR/var/starface/fs-interface"
 mkdir -p "$TMPDIR/var/spool/hylafax/log"
@@ -23,7 +22,6 @@ mkdir -p "$TMPDIR/var/log/postgresql"
 # 1. Komplette Verzeichnisse kopieren
 echo "📥 Kopiere vollständige Verzeichnisse..."
 rsync -a /var/log/asterisk/ "$TMPDIR/var/log/asterisk/" 2>/dev/null
-rsync -a /var/log/tomcat/ "$TMPDIR/var/log/tomcat/" 2>/dev/null
 rsync -a /var/log/starface/ "$TMPDIR/var/log/starface/" 2>/dev/null
 rsync -a /var/starface/fs-interface/ "$TMPDIR/var/starface/fs-interface/" 2>/dev/null
 rsync -a /var/spool/hylafax/log/ "$TMPDIR/var/spool/hylafax/log/" 2>/dev/null
@@ -82,7 +80,7 @@ ASTERISKINFO="${TMPDIR}/asteriskinfo.txt"
   echo "### Asterisk core show channels"; rasterisk -x 'core show channels'; echo
 } > "$ASTERISKINFO"
 
-# 7. Dateien und Größen prüfen
+# 7. Dateien und Speicherbelegung prüfen
 FILEINFO="${TMPDIR}/files.txt"
 {
   echo "### 📂 Fax-Verzeichnis: /var/spool/asterisk/fax"
@@ -100,7 +98,7 @@ FILEINFO="${TMPDIR}/files.txt"
   ls -lh /home/starface/backup/Default/*.sar 2>/dev/null || echo "Keine .sar-Dateien gefunden"
 } > "$FILEINFO"
 
-# 8. ZIP erstellen (nur Inhalte, kein doppelter Ordner)
+# 8. ZIP erstellen (ohne zusätzlichen Unterordner im Archiv)
 echo "📦 Erstelle ZIP: $ZIPPFAD"
 cd "$TMPDIR"
 zip -r "$ZIPPFAD" . >/dev/null
@@ -108,7 +106,7 @@ zip -r "$ZIPPFAD" . >/dev/null
 # 9. Aufräumen
 rm -rf "$TMPDIR"
 
-# 10. Entpackhilfe anzeigen
+# 10. Hinweis & Entpack-Hilfe
 echo
 echo "✅ Archiv erstellt: $ZIPPFAD"
 echo "################################################################################"
@@ -117,7 +115,7 @@ echo "mkdir -p \"$ENTPACKPFAD\" && unzip \"$ZIPPFAD\" -d \"$ENTPACKPFAD\""
 echo "################################################################################"
 echo
 
-# 11. Selbstlöschung
+# 11. Selbstlöschung (nur bei realer Datei aus /tmp/)
 if [[ "$0" == /tmp/* && -f "$0" ]]; then
   echo "🧹 Lösche mich selbst: $0"
   rm -f "$0"

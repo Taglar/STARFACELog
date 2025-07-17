@@ -5,6 +5,7 @@ DATUM=$(date '+%Y-%m-%d_%H-%M')
 ZIPNAME="logs_${DATUM}.zip"
 TMPDIR="/tmp/logs_${DATUM}"
 ZIPPFAD="/tmp/${ZIPNAME}"
+ZIELDIR="/tmp/SFLogs/$(basename "$ZIPPFAD" .zip)"
 
 echo "📁 Erstelle temporäres Verzeichnis: $TMPDIR"
 mkdir -p "$TMPDIR"
@@ -25,7 +26,7 @@ rsync -a /var/log/starface/ "$TMPDIR/var/log/starface/" 2>/dev/null
 rsync -a /var/starface/fs-interface/ "$TMPDIR/var/starface/fs-interface/" 2>/dev/null
 rsync -a /var/spool/hylafax/log/ "$TMPDIR/var/spool/hylafax/log/" 2>/dev/null
 
-# 2. Symlinks folgen für openfire/postgresql (z. B. /opt/openfire/logs)
+# 2. Symlinks folgen für openfire/postgresql
 echo "🔗 Kopiere openfire/postgresql falls vorhanden..."
 [[ -d /var/log/openfire ]] && rsync -Lra /var/log/openfire/ "$TMPDIR/var/log/openfire/"
 [[ -d /var/log/postgresql ]] && rsync -Lra /var/log/postgresql/ "$TMPDIR/var/log/postgresql/"
@@ -46,7 +47,7 @@ find /var/starface/module/instances/repo/ -type f -path "*/log/log.log" -exec ba
   done
 ' bash {} +
 
-# 5. Systeminformationen erfassen
+# 5a. Systeminformationen erfassen
 echo "🧠 Erfasse Systeminformationen..."
 SYSINFO="${TMPDIR}/systeminfo.txt"
 {
@@ -74,33 +75,25 @@ echo "📞 Erfasse Asterisk-Daten..."
 ASTERISKINFO="${TMPDIR}/asteriskinfo.txt"
 {
   echo "### Asterisk Systeminfo"
-  rasterisk -x "core show sysinfo"
-  echo
+  rasterisk -x "core show sysinfo"; echo
 
   echo "### Asterisk Uptime"
-  rasterisk -x "core show uptime"
-  echo
+  rasterisk -x "core show uptime"; echo
 
   echo "### Asterisk Threads"
-  rasterisk -x "core show threads"
-  echo
+  rasterisk -x "core show threads"; echo
 
   echo "### Asterisk Channels"
-  rasterisk -x "core show channels"
-  echo
+  rasterisk -x "core show channels"; echo
 
   echo "### Asterisk Hints (BLF)"
-  rasterisk -x "core show hints"
-  echo
+  rasterisk -x "core show hints"; echo
 
   echo "### SIP Peers (falls vorhanden)"
-  rasterisk -x "sip show peers" 2>/dev/null || echo "SIP nicht aktiviert"
-  echo
+  rasterisk -x "sip show peers" 2>/dev/null || echo "SIP nicht aktiviert"; echo
 
   echo "### Taskprocessors (Überlastung erkennbar)"
-  rasterisk -x "core show taskprocessors"
-  echo
-
+  rasterisk -x "core show taskprocessors"; echo
 } > "$ASTERISKINFO"
 
 # 6. Archiv erstellen
@@ -113,10 +106,10 @@ rm -rf "$TMPDIR"
 # 8. Abschluss
 echo
 echo "✅ Archiv erstellt: $ZIPPFAD"
-echo "######################################################"
+echo "################################################################################"
 echo "📂 Entpacken mit:"
-echo "unzip $ZIPPFAD -d \"/tmp/SFLogs\""
-echo "######################################################"
+echo "unzip $ZIPPFAD -d \"/tmp/SFLogs/$(basename "$ZIPPFAD" .zip)\""
+echo "################################################################################"
 echo
 
 # 9. Selbstlöschung

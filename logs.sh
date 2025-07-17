@@ -13,6 +13,7 @@ mkdir -p "$TMPDIR"
 # Verzeichnisstruktur vorbereiten
 echo "📁 Erstelle Zielverzeichnisse..."
 mkdir -p "$TMPDIR/var/log/asterisk"
+mkdir -p "$TMPDIR/var/log/tomcat"
 mkdir -p "$TMPDIR/var/log/starface"
 mkdir -p "$TMPDIR/var/starface/fs-interface"
 mkdir -p "$TMPDIR/var/spool/hylafax/log"
@@ -23,6 +24,7 @@ mkdir -p "$TMPDIR/var/log/postgresql"
 echo "📥 Kopiere vollständige Verzeichnisse..."
 rsync -a /var/log/asterisk/ "$TMPDIR/var/log/asterisk/" 2>/dev/null
 rsync -a /var/log/starface/ "$TMPDIR/var/log/starface/" 2>/dev/null
+rsync -a /var/log/starface/ "$TMPDIR/var/log/tomcat/" 2>/dev/null
 rsync -a /var/starface/fs-interface/ "$TMPDIR/var/starface/fs-interface/" 2>/dev/null
 rsync -a /var/spool/hylafax/log/ "$TMPDIR/var/spool/hylafax/log/" 2>/dev/null
 

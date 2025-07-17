@@ -1,11 +1,11 @@
 #!/bin/bash
 
 # Zeitstempel & Pfade
-DATUM=$(date '+%Y-%m-%d_%H-%M')
+DATUM=$(date '+%Y-%m-%d_%H-%M-%S')
 ZIPNAME="logs_${DATUM}.zip"
 TMPDIR="/tmp/logs_${DATUM}"
 ZIPPFAD="/tmp/${ZIPNAME}"
-ZIELDIR="/tmp/SFLogs/$(basename "$ZIPPFAD" .zip)"
+ZIELENTPACK="/tmp/SFLogs/$(basename "$ZIPPFAD" .zip)"
 
 echo "📁 Erstelle temporäres Verzeichnis: $TMPDIR"
 mkdir -p "$TMPDIR"
@@ -26,7 +26,7 @@ rsync -a /var/log/starface/ "$TMPDIR/var/log/starface/" 2>/dev/null
 rsync -a /var/starface/fs-interface/ "$TMPDIR/var/starface/fs-interface/" 2>/dev/null
 rsync -a /var/spool/hylafax/log/ "$TMPDIR/var/spool/hylafax/log/" 2>/dev/null
 
-# 2. Symlinks folgen für openfire/postgresql
+# 2. Symlinks folgen für openfire/postgresql (z. B. /opt/openfire/logs)
 echo "🔗 Kopiere openfire/postgresql falls vorhanden..."
 [[ -d /var/log/openfire ]] && rsync -Lra /var/log/openfire/ "$TMPDIR/var/log/openfire/"
 [[ -d /var/log/postgresql ]] && rsync -Lra /var/log/postgresql/ "$TMPDIR/var/log/postgresql/"
@@ -47,7 +47,7 @@ find /var/starface/module/instances/repo/ -type f -path "*/log/log.log" -exec ba
   done
 ' bash {} +
 
-# 5a. Systeminformationen erfassen
+# 5. Systeminformationen erfassen
 echo "🧠 Erfasse Systeminformationen..."
 SYSINFO="${TMPDIR}/systeminfo.txt"
 {
@@ -70,49 +70,39 @@ SYSINFO="${TMPDIR}/systeminfo.txt"
   echo "### Änderungen in /etc"; find /etc -type f -printf "%T@ %Tc %p\n" 2>/dev/null | sort -n | tail -n 20; echo
 } > "$SYSINFO"
 
-# 5b. Asterisk-Informationen erfassen
-echo "📞 Erfasse Asterisk-Daten..."
+# 6. Asterisk-Informationen erfassen
+echo "🧠 Erfasse Asterisk-Informationen..."
 ASTERISKINFO="${TMPDIR}/asteriskinfo.txt"
 {
-  echo "### Asterisk Systeminfo"
-  rasterisk -x "core show sysinfo"; echo
-
-  echo "### Asterisk Uptime"
-  rasterisk -x "core show uptime"; echo
-
-  echo "### Asterisk Threads"
-  rasterisk -x "core show threads"; echo
-
-  echo "### Asterisk Channels"
-  rasterisk -x "core show channels"; echo
-
-  echo "### Asterisk Hints (BLF)"
-  rasterisk -x "core show hints"; echo
-
-  echo "### SIP Peers (falls vorhanden)"
-  rasterisk -x "sip show peers" 2>/dev/null || echo "SIP nicht aktiviert"; echo
-
-  echo "### Taskprocessors (Überlastung erkennbar)"
-  rasterisk -x "core show taskprocessors"; echo
+  echo "### core show sysinfo"; echo "----------------------"
+  rasterisk -x 'core show sysinfo'; echo
+  echo "### core show uptime"; echo "---------------------"
+  rasterisk -x 'core show uptime'; echo
+  echo "### core show hints"; echo "--------------------"
+  rasterisk -x 'core show hints'; echo
+  echo "### core show channels"; echo "-----------------------"
+  rasterisk -x 'core show channels'; echo
+  echo "### core show threads"; echo "----------------------"
+  rasterisk -x 'core show threads'; echo
 } > "$ASTERISKINFO"
 
-# 6. Archiv erstellen
+# 7. Archiv erstellen
 echo "📦 Erstelle ZIP: $ZIPPFAD"
 cd "$(dirname "$TMPDIR")" && zip -r "$ZIPPFAD" "$(basename "$TMPDIR")" >/dev/null
 
-# 7. Aufräumen
+# 8. Aufräumen
 rm -rf "$TMPDIR"
 
-# 8. Abschluss
+# 9. Abschlussmeldung
 echo
 echo "✅ Archiv erstellt: $ZIPPFAD"
-echo "####################################################################################"
+echo "################################################################################"
 echo "📂 Entpacken mit:"
-echo "mkdir -p /tmp/SFLogs && unzip $ZIPPFAD -d \"/tmp/SFLogs/$(basename "$ZIPPFAD" .zip)\""
-echo "####################################################################################"
+echo "mkdir -p /tmp/SFLogs && unzip $ZIPPFAD -d \"$ZIELENTPACK\""
+echo "################################################################################"
 echo
 
-# 9. Selbstlöschung
+# 10. Selbstlöschung
 if [[ "$0" == /tmp/* && -f "$0" ]]; then
   echo "🧹 Lösche mich selbst: $0"
   rm -f "$0"

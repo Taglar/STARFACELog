@@ -26,7 +26,7 @@ rsync -a /var/log/starface/ "$TMPDIR/var/log/starface/" 2>/dev/null
 rsync -a /var/starface/fs-interface/ "$TMPDIR/var/starface/fs-interface/" 2>/dev/null
 rsync -a /var/spool/hylafax/log/ "$TMPDIR/var/spool/hylafax/log/" 2>/dev/null
 
-# 2. Symlinks folgen für openfire/postgresql (z. B. /opt/openfire/logs)
+# 2. Symlinks folgen für openfire/postgresql
 echo "🔗 Kopiere openfire/postgresql falls vorhanden..."
 [[ -d /var/log/openfire ]] && rsync -Lra /var/log/openfire/ "$TMPDIR/var/log/openfire/"
 [[ -d /var/log/postgresql ]] && rsync -Lra /var/log/postgresql/ "$TMPDIR/var/log/postgresql/"
@@ -70,17 +70,17 @@ SYSINFO="${TMPDIR}/systeminfo.txt"
   echo "### Änderungen in /etc"; find /etc -type f -printf "%T@ %Tc %p\n" 2>/dev/null | sort -n | tail -n 20; echo
 } > "$SYSINFO"
 
-# 6. Asterisk-Infos sammeln
+# 6. Asteriskinfos erfassen
 ASTERISKINFO="${TMPDIR}/asteriskinfo.txt"
 {
-  echo "### core show uptime"; echo "--------------------"; rasterisk -x 'core show uptime'; echo
-  echo "### core show sysinfo"; echo "---------------------"; rasterisk -x 'core show sysinfo'; echo
-  echo "### core show threads"; echo "----------------------"; rasterisk -x 'core show threads'; echo
-  echo "### core show hints"; echo "--------------------"; rasterisk -x 'core show hints'; echo
-  echo "### core show channels"; echo "-----------------------"; rasterisk -x 'core show channels'; echo
+  echo "### Asterisk core show sysinfo"; rasterisk -x 'core show sysinfo'; echo
+  echo "### Asterisk core show uptime"; rasterisk -x 'core show uptime'; echo
+  echo "### Asterisk core show threads"; rasterisk -x 'core show threads'; echo
+  echo "### Asterisk core show hints"; rasterisk -x 'core show hints'; echo
+  echo "### Asterisk core show channels"; rasterisk -x 'core show channels'; echo
 } > "$ASTERISKINFO"
 
-# 7. Speicherbelegungen prüfen
+# 7. Dateien und Größen prüfen
 FILEINFO="${TMPDIR}/files.txt"
 {
   echo "### 📂 Fax-Verzeichnis: /var/spool/asterisk/fax"
@@ -98,14 +98,15 @@ FILEINFO="${TMPDIR}/files.txt"
   ls -lh /home/starface/backup/Default/*.sar 2>/dev/null || echo "Keine .sar-Dateien gefunden"
 } > "$FILEINFO"
 
-# 8. Archiv erstellen
+# 8. ZIP erstellen (nur Inhalte, kein doppelter Ordner)
 echo "📦 Erstelle ZIP: $ZIPPFAD"
-cd "$TMPDIR/.." && zip -r "$ZIPPFAD" "$(basename "$TMPDIR")" >/dev/null
+cd "$TMPDIR"
+zip -r "$ZIPPFAD" . >/dev/null
 
 # 9. Aufräumen
 rm -rf "$TMPDIR"
 
-# 10. Abschluss
+# 10. Entpackhilfe anzeigen
 echo
 echo "✅ Archiv erstellt: $ZIPPFAD"
 echo "################################################################################"

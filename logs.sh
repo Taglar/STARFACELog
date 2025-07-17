@@ -109,7 +109,7 @@ echo
 echo "✅ Archiv erstellt: $ZIPPFAD"
 echo "################################################################################"
 echo "📂 Entpacken mit:"
-echo "unzip $ZIPPFAD -d \"/tmp/SFLogs/$(basename "$TMPDIR")\""
+echo "mkdir -p \"$ENTPACKPFAD\" && unzip \"$ZIPPFAD\" -d \"$ENTPACKPFAD\""
 echo "################################################################################"
 echo
 

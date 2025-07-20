@@ -1,10 +1,10 @@
-# 🧰 STARFACE Log-Sammelscript
+# STARFACE Log-Sammelscript
 
 Dieses Bash-Script sammelt automatisiert relevante Log- und Systeminformationen einer STARFACE-Anlage zur eigenen Fehlerdiagnose.
 
 ---
 
-## ✨ Ausführung (empfohlen für Partner)
+## Ausführung
 
 ```bash
 bash <(curl -s https://raw.githubusercontent.com/Taglar/STARFACELog/main/logs.sh)
@@ -12,13 +12,13 @@ bash <(curl -s https://raw.githubusercontent.com/Taglar/STARFACELog/main/logs.sh
 
 ---
 
-## 📆 Zweck
+## Zweck
 
 Das Script erstellt ein ZIP-Archiv mit sämtlichen relevanten Informationen zur Selbstanalyse von Fehlern bzw. Problemen.
 
 ---
 
-## 📁 Gesammelte Inhalte
+## Gesammelte Inhalte
 
 ### 🔹 Logverzeichnisse
 
@@ -65,7 +65,7 @@ Das Script erstellt ein ZIP-Archiv mit sämtlichen relevanten Informationen zur 
 
 ---
 
-## 📆 Ausgabe
+## Ausgabe
 
 Das Archiv wird als ZIP-Datei unter `/tmp/` gespeichert, z. B.:
 
@@ -84,4 +84,3 @@ mkdir -p /tmp/SFLogs/2025-07-17_13-12-29 && unzip /tmp/logs_2025-07-17_13-12-29.
 ## ✅ Hinweise
 
 * Das Script löscht sich nach der Ausführung selbst (wenn aus `/tmp/` gestartet).
-* Die ZIP-Datei enthält keinen zusätzlichen Unterordner – alles wird direkt in den Zielpfad entpackt.
